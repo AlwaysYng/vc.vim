@@ -33,6 +33,7 @@ fun! vc#act#blame(argsd)
     if exists('+cursorbind')
         setlocal cursorbind
     endif
+    let g:vc_blame_bufnr = bufnr('%')
     wincmd p " return to previous window
     setlocal scrollbind
     if exists('+cursorbind')
@@ -84,10 +85,10 @@ fun! vc#act#diffme(repo, revision, path, force)
     else
         let argsd = {"revision" : a:revision, "path":a:path}
         let cmd = "%!". vc#repos#call(a:repo, 'diffcmd', argsd)
-        if a:revision != "" 
-            let fname = vc#utils#strip(a:revision). "#" . vc#utils#strip(a:path) 
+        if a:revision != ""
+            let fname = vc#utils#strip(a:revision). "#" . vc#utils#strip(a:path)
         else
-            let fname = vc#utils#strip(a:path) 
+            let fname = vc#utils#strip(a:path)
         endif
         let fname = substitute(fname, '\~', "", "")
     endif
@@ -214,7 +215,7 @@ fun! vc#act#newfile(argsd)
             let b:onwritecallback = a:argsd.onwritecallback
             au VCOnWrite BufWritePost <buffer> call vc#blank#callonwrite()
         endif
-    catch 
+    catch
         call vc#utils#dbgmsg("At vc#act#newfile :", v:exception)
     endtry
     retu s:endop(1)
@@ -236,7 +237,7 @@ fun! vc#act#vs(argsd)
 endf
 
 fun! s:grep(argsd)
-    if has_key(a:argsd, "grep") 
+    if has_key(a:argsd, "grep")
         let @/ = a:argsd.grep
         silent! exe 'normal n'
     endif
@@ -249,16 +250,16 @@ endf
 
 fun! vc#act#logit(...)
     try
-        if g:vc_log_name == "" 
+        if g:vc_log_name == ""
             retu vc#utils#showerr("g:vc_log_name not set, see help g:vc_log_name")
         endif
         sil! exe 'redi! >>' g:vc_log_name
         echo join(getbufline(bufnr('vc_window'), 0, "$"), "\n") | redr
         sil! redi END
-        echohl MoreMsg | echo "Logged to : " . g:vc_log_name 
+        echohl MoreMsg | echo "Logged to : " . g:vc_log_name
         echo "Press any key to continue" | echohl None
         let x = getchar()
-    catch 
+    catch
         call vc#utils#dbgmsg("At vc#act#logit:", v:exception)
     finally
         call vc#prompt#show()
@@ -291,7 +292,7 @@ fun! vc#act#showops(thedict)
                 let [key, val] = [splits[0], join(splits[1:], ":")]
                 echo printf("%15s: %s", key, val)
             endif
-        catch 
+        catch
            call vc#utils#dbgmsg("At vc#act#help:", v:exception)
        endtry
     endfor
@@ -303,7 +304,7 @@ endf
 "helpers funs {{{2
 
 fun! s:startop()
-    if vc#prompt#isploop() 
+    if vc#prompt#isploop()
         call vc#winj#close()
         retu vc#passed()
     endif

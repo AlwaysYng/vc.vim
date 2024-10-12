@@ -11,11 +11,11 @@ let s:endnow = 0
 
 "For projects tracked by more than one repo set the preferred default repo
 fun! vc#Defaultrepo(repo)  "{{{2
-    if matchstr(a:repo, vc#repos#repopatt()) == "" 
+    if matchstr(a:repo, vc#repos#repopatt()) == ""
         retu vc#utils#showerr("Failed, valid options are " . join(vc#repos#repos(), "|"))
     endif
     let g:vc_default_repo = a:repo
-    if exists('b:vc_path') 
+    if exists('b:vc_path')
         unlet! b:vc_path
     endif
     call vc#utils#showconsolemsg("Default repository set to " . g:vc_default_repo, 1)
@@ -29,7 +29,7 @@ fun! vc#Diff(bang, showerr, ...) "{{{2
         let meta = vc#repos#meta(disectd.target, disectd.forcerepo)
         if disectd.vcnoparse
             let argsd = {
-                        \ "meta": meta, 
+                        \ "meta": meta,
                         \ "revision": disectd.revision,
                         \ "cargs": disectd.cargs,
                         \ "target": disectd.target,
@@ -70,6 +70,25 @@ fun! vc#Blame(...)   "{{{2
     endtry
 endf
 "2}}}
+
+let g:VCBlame = {}
+
+fun! g:VCBlame.ExecBlame()
+    call vc#Blame()
+endf
+
+fun! g:VCBlame.IsBlaming()
+    return exists("g:vc_blame_bufnr") && bufexists(g:vc_blame_bufnr)
+endf
+
+fun! g:VCBlame.ExitBlame()
+    if g:VCBlame.IsBlaming()
+        exe 'bd ' . g:vc_blame_bufnr
+        unlet g:vc_blame_bufnr
+        tabdo setlocal noscrollbind
+        tabdo setlocal nocursorbind
+    endif
+endf
 
 fun! vc#Info(...)  "{{{2
     try
@@ -122,9 +141,9 @@ fun! vc#Revert(bang, ...)  "{{{2
         let target = vc#utils#bufrelpath()
         let meta = vc#repos#meta(target, vc#fetchrepo(a:000))
         let argsd = {"meta": meta, "cargs": "" }
-        let cmd = vc#repos#call(meta.repo, "revertcmd", argsd) 
+        let cmd = vc#repos#call(meta.repo, "revertcmd", argsd)
         let [result, response] = vc#utils#execshellcmduseexec(cmd, 0)
-        if result == vc#passed() 
+        if result == vc#passed()
             if response != "" | call vc#utils#showconsolemsg(response, 1) | en
             if a:bang == "!" | call vc#utils#refreshfile(target) | en
         else
@@ -168,7 +187,7 @@ fun! vc#MoveCopy(bang, op, ...)  "{{{2
                         \"cargs":disectd.cargs}
             let opcmd =  a:op == "copy" ? "browse.copycmd" : "browse.movecmd"
             let [result, cmd] = vc#repos#call(meta.repo, opcmd, theargsd)
-        
+
             "For move reload always, for copy on bang
             if result == vc#passed() && cmd != ""
                 let [result, response] = vc#utils#execshellcmduseexec(cmd, 0)
@@ -208,7 +227,7 @@ fun! vc#HgInOut(cmd, title, ...)   "{{{2
         call vc#init()
         let disectd = vc#argsdisectlst(a:000, "onlydirs")
         let meta = vc#repos#meta(disectd.target, disectd.forcerepo)
-        
+
         let argsd = {"cargs": disectd.cargs, "meta":meta}
         let [entries, cmd] = vc#repos#call(meta.repo, a:cmd, argsd)
 
@@ -228,11 +247,11 @@ fun! vc#HgInOut(cmd, title, ...)   "{{{2
         unlet! meta
     endtry
     call vc#winj#populateJWindow(ldict)
-endf 
+endf
 "2}}}
 
 "init/exit {{{2
-fun! vc#home() 
+fun! vc#home()
     let [athome, curwinnr, jwinnr] = [ 0, winnr(), bufwinnr('vc_window')]
     if jwinnr > 0 && curwinnr != jwinnr
         silent! exe jwinnr . 'wincmd w'
@@ -241,12 +260,12 @@ fun! vc#home()
     retu [atHome, jwinnr]
 endf
 
-fun! vc#doexit() 
+fun! vc#doexit()
     retu s:endnow
 endf
 
 fun! vc#prepexit()
-    if vc#prompt#isploop() 
+    if vc#prompt#isploop()
         let s:endnow = 1
         call vc#stack#clear()
         call vc#select#clear()
@@ -316,10 +335,10 @@ fun! vc#argsdisectlstmultipletargets(arglst, globpath)
     if len(targets) == 0 | call add(targets, vc#maketarget(a:globpath)) | endif
     call filter(arglst, '!vc#utils#localFS(v:val)')
     let cargs = vc#utils#strip(join(arglst, " "))
-    retu { 
-                \ "forcerepo": forcerepo, 
+    retu {
+                \ "forcerepo": forcerepo,
                 \ "targets": targets,
-                \ "cargs": cargs, 
+                \ "cargs": cargs,
                 \}
 endf
 
@@ -331,7 +350,7 @@ fun! vc#argsdisectlst(arglst, globpath)
     let revision = vc#argsremoveparam(arglst, "-revision", 0, 1)
     let target = vc#argsremoveparam(arglst, "-target", 0, 1)
     let arglst = filter(arglst, 'v:val != ""')
-    if target == "" 
+    if target == ""
         let lasttoken = len(arglst) > 0 ? arglst[-1] : ""
         if( lasttoken != "" && vc#utils#localFS(lasttoken))
             let target = vc#utils#fnameescape(lasttoken)
@@ -344,10 +363,10 @@ fun! vc#argsdisectlst(arglst, globpath)
     endif
     let cargs = join(arglst, " ")
 
-    retu { 
-                \ "forcerepo": forcerepo, 
+    retu {
+                \ "forcerepo": forcerepo,
                 \ "target": target,
-                \ "cargs": cargs, 
+                \ "cargs": cargs,
                 \ "revision": revision,
                 \ "vcnoparse": vcnoparse != "" ? 1 : 0,
                 \}
@@ -382,19 +401,19 @@ fun! vc#argsremoveparam(arglst, param, ispattern, hasvalue)
                 " -m 'This is a tes'
                 let [foundparamvalue, startfound] = ["", 0]
                 for j in range(i+1, len(a:arglst)-1)
-                    if matchstr(a:arglst[j], '\M^\s\*=\s\*$') == "=" 
+                    if matchstr(a:arglst[j], '\M^\s\*=\s\*$') == "="
                         let a:arglst[j] = ""
                         continue
                     else
                         let paramseg = startfound == 1 ? a:arglst[j] : substitute(a:arglst[j], '\V\^\s\*=\*\s\*', "", "")
                         let [a:arglst[i], a:arglst[j]] = ["", ""]
                         let foundparamvalue = vc#utils#strip(foundparamvalue . " " . paramseg)
-                        if len(matchstr(paramseg, "^[\"|\']")) > 0 && startfound == 0 
-                            let startfound = 1 
+                        if len(matchstr(paramseg, "^[\"|\']")) > 0 && startfound == 0
+                            let startfound = 1
                             continue
                         elseif len(matchstr(paramseg, "[\"|\']$")) > 0 "end found
                             retu foundparamvalue
-                        elseif startfound == 1 
+                        elseif startfound == 1
                             continue
                         endif
                         return foundparamvalue
@@ -417,7 +436,7 @@ fun! vc#maketarget(globpath)
     try
         if a:globpath != "onlydirs" && exists('b:vc_path') | retu b:vc_path | en
         if a:globpath != "onlydirs"
-            retu vc#utils#bufrelpath() 
+            retu vc#utils#bufrelpath()
         endif
     catch |  endtry
     let target = a:globpath == "onlyfiles" && target == "." ? "" : target
